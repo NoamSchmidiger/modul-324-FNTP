@@ -15,6 +15,14 @@ wird.
 > Die Web-Applikation befindet sich im Ordner `/app`.
 > Wird eine andere Ordnerstruktur verwendet, müssen die entsprechenden Build- und Deployment-Scripts angepasst werden.
 
+## Team
+
+Das Team besteht aus vier Personen:
+* Peter Ngo
+* Tim Marlétaz
+* Furkan Güner
+* Noam Schmidiger
+
 ## Projektidee
 
 Die Applikation bildet das klassische Spiel **Schiffe versenken** als Web-Anwendung ab.

@@ -1,0 +1,2 @@
+### START A GAME
+POST http://localhost:3000/games/start

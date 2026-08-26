@@ -41,6 +41,35 @@ Geplant sind unter anderem folgende Funktionen:
 
 Die Spiellogik soll möglichst unabhängig von der Benutzeroberfläche aufgebaut werden, damit sie automatisiert getestet werden kann.
 
+## Lokal starten
+
+### Voraussetzungen
+
+* **Node.js** (LTS) und **npm**
+* Optional: [mise](https://mise.jdx.dev/) – installiert die in `mise.toml` definierten Versionen mit `mise install`
+
+Die Applikation besteht aus zwei Teilen, die parallel laufen müssen: dem Backend (`server/`) und dem Frontend (`frontend/`). Dafür werden zwei Terminals benötigt.
+
+### Backend
+
+```bash
+cd server
+npm install
+node server.js
+```
+
+Der Server läuft anschliessend auf [http://localhost:3000](http://localhost:3000).
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Der Vite-Dev-Server läuft anschliessend auf [http://localhost:5173](http://localhost:5173). Diese Adresse wird im Browser geöffnet.
+
 ## CI/CD
 
 Das Repository soll so aufgebaut werden, dass Änderungen automatisiert überprüft und verarbeitet werden.

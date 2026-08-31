@@ -41,20 +41,30 @@ Geplant sind unter anderem folgende Funktionen:
 
 Die Spiellogik soll möglichst unabhängig von der Benutzeroberfläche aufgebaut werden, damit sie automatisiert getestet werden kann.
 
-## Lokale Entwicklung
+## Lokal starten
 
-Voraussetzungen: **JDK 21+** und **Node.js 20+**.
+### Voraussetzungen
 
-### Backend (Spring Boot)
+#### Technologien
+* Vue.js
+* Spring Boot
+
+* **Node.js** (LTS) und **npm**
+* Optional: [mise](https://mise.jdx.dev/) – installiert die in `mise.toml` definierten Versionen mit `mise install`
+
+Die Applikation besteht aus zwei Teilen, die parallel laufen müssen: dem Backend (`server/`) und dem Frontend (`frontend/`). Dafür werden zwei Terminals benötigt.
+
+### Backend
 
 ```bash
-cd backend
-./mvnw spring-boot:run
+cd server
+npm install
+node server.js
 ```
 
-Läuft auf `http://localhost:8080`, Endpunkt: `GET /api/hello`.
+Der Server läuft anschliessend auf [http://localhost:3000](http://localhost:3000).
 
-### Frontend (Vue + Vite)
+### Frontend
 
 ```bash
 cd frontend
@@ -62,7 +72,7 @@ npm install
 npm run dev
 ```
 
-Läuft auf `http://localhost:5173` und zeigt die Antwort des Backends an.
+Der Vite-Dev-Server läuft anschliessend auf [http://localhost:5173](http://localhost:5173). Diese Adresse wird im Browser geöffnet.
 
 ## CI/CD
 

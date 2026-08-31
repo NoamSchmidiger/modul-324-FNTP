@@ -41,6 +41,29 @@ Geplant sind unter anderem folgende Funktionen:
 
 Die Spiellogik soll möglichst unabhängig von der Benutzeroberfläche aufgebaut werden, damit sie automatisiert getestet werden kann.
 
+## Lokale Entwicklung
+
+Voraussetzungen: **JDK 21+** und **Node.js 20+**.
+
+### Backend (Spring Boot)
+
+```bash
+cd backend
+./mvnw spring-boot:run
+```
+
+Läuft auf `http://localhost:8080`, Endpunkt: `GET /api/hello`.
+
+### Frontend (Vue + Vite)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Läuft auf `http://localhost:5173` und zeigt die Antwort des Backends an.
+
 ## CI/CD
 
 Das Repository soll so aufgebaut werden, dass Änderungen automatisiert überprüft und verarbeitet werden.

@@ -45,6 +45,10 @@ Die Spiellogik soll möglichst unabhängig von der Benutzeroberfläche aufgebaut
 
 ### Voraussetzungen
 
+#### Technologien
+* Vue.js
+* Spring Boot
+
 * **Node.js** (LTS) und **npm**
 * Optional: [mise](https://mise.jdx.dev/) – installiert die in `mise.toml` definierten Versionen mit `mise install`
 

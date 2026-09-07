@@ -1,13 +1,13 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted } from "vue";
 
-const message = ref('...')
+const message = ref("...");
 
 onMounted(async () => {
-  const response = await fetch('http://localhost:8080/api/hello')
-  const data = await response.json()
-  message.value = data.message
-})
+  const response = await fetch("http://localhost:8080/api/hello");
+  const data = await response.json();
+  message.value = data.message;
+});
 </script>
 
 <template>

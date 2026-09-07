@@ -1,0 +1,30 @@
+---
+name: Prettier
+
+on:
+  push:
+    branches-ignore:
+      # notest branches to ignore testing of partial online commits
+      - "notest/**"
+
+  pull_request:
+    branches-ignore:
+      # notest branches to ignore testing of partial online commits
+      - "notest/**"
+
+permissions:
+  contents: write
+
+jobs:
+  prettier-fix:
+    runs-on: ubuntu-latest
+    # Limit the running time
+    timeout-minutes: 10
+    steps:
+      - name: Invoke the Prettier fix
+        # Use the latest minor version within the current major version.
+        uses: WorkOfStan/prettier-fix@v1
+        with:
+          commit-changes: true
+          #debug: true
+          #node-version: "24"

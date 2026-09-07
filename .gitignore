@@ -216,3 +216,11 @@ terraform.rc
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,terraform,node
 
+### Java / Maven ###
+target/
+*.class
+
+### JetBrains IDEs ###
+.idea/
+*.iml
+

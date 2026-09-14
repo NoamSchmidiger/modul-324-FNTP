@@ -1,0 +1,26 @@
+{
+  "name": "modul-324-fntp",
+  "version": "1.0.0",
+  "description": "Dieses Repository enthält eine Web-Applikation für das Spiel **Schiffe versenken**, welche im Rahmen des **BBZBL Moduls 324** entwickelt wird.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NoamSchmidiger/modul-324-FNTP.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/NoamSchmidiger/modul-324-FNTP/issues"
+  },
+  "homepage": "https://github.com/NoamSchmidiger/modul-324-FNTP#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.4.1"
+  }
+}

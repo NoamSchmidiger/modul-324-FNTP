@@ -2,10 +2,9 @@
 
 ## [1.2.0](https://github.com/NoamSchmidiger/modul-324-FNTP/compare/v1.1.0...v1.2.0) (2026-09-16)
 
-
 ### Features
 
-* add functionality to start a game ([#83](https://github.com/NoamSchmidiger/modul-324-FNTP/issues/83)) ([42ff6fb](https://github.com/NoamSchmidiger/modul-324-FNTP/commit/42ff6fb747e0055fa3ab58a50b5c7991d025f96c))
+- add functionality to start a game ([#83](https://github.com/NoamSchmidiger/modul-324-FNTP/issues/83)) ([42ff6fb](https://github.com/NoamSchmidiger/modul-324-FNTP/commit/42ff6fb747e0055fa3ab58a50b5c7991d025f96c))
 
 ## [1.1.0](https://github.com/NoamSchmidiger/modul-324-FNTP/compare/v1.0.0...v1.1.0) (2026-08-31)
 

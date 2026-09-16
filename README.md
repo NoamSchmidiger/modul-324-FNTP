@@ -4,10 +4,10 @@ Dieses Repository enthält eine Web-Applikation für das Spiel **Schiffe versenk
 
 Ziel des Projekts ist es, eine Web-Applikation mit **JavaScript** zu erstellen, welche analog zum [Musterprojekt](https://github.com/herrhodel/modul-324-muster) automatisch:
 
-* getestet
-* gebaut
-* released
-* deployed
+- getestet
+- gebaut
+- released
+- deployed
 
 wird.
 
@@ -18,10 +18,11 @@ wird.
 ## Team
 
 Das Team besteht aus vier Personen:
-* Peter Ngo
-* Tim Marlétaz
-* Furkan Güner
-* Noam Schmidiger
+
+- Peter Ngo
+- Tim Marlétaz
+- Furkan Güner
+- Noam Schmidiger
 
 ## Projektidee
 
@@ -31,15 +32,49 @@ Die Spiellogik wird mit **JavaScript** umgesetzt. Die Benutzeroberfläche wird m
 
 Geplant sind unter anderem folgende Funktionen:
 
-* Darstellung eines Spielfeldes
-* Platzierung von Schiffen
-* Auswahl von Feldern zum Angreifen
-* Erkennung von Treffern und Fehlschüssen
-* Erkennung versenkter Schiffe
-* Erkennung des Spielendes
-* Möglichkeit, ein neues Spiel zu starten
+- Darstellung eines Spielfeldes
+- Platzierung von Schiffen
+- Auswahl von Feldern zum Angreifen
+- Erkennung von Treffern und Fehlschüssen
+- Erkennung versenkter Schiffe
+- Erkennung des Spielendes
+- Möglichkeit, ein neues Spiel zu starten
 
 Die Spiellogik soll möglichst unabhängig von der Benutzeroberfläche aufgebaut werden, damit sie automatisiert getestet werden kann.
+
+## Lokal starten
+
+### Voraussetzungen
+
+#### Technologien
+
+- Vue.js
+- Spring Boot
+
+- **Node.js** (LTS) und **npm**
+- Optional: [mise](https://mise.jdx.dev/) – installiert die in `mise.toml` definierten Versionen mit `mise install`
+
+Die Applikation besteht aus zwei Teilen, die parallel laufen müssen: dem Backend (`server/`) und dem Frontend (`frontend/`). Dafür werden zwei Terminals benötigt.
+
+### Backend
+
+```bash
+cd server
+npm install
+node server.js
+```
+
+Der Server läuft anschliessend auf [http://localhost:3000](http://localhost:3000).
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Der Vite-Dev-Server läuft anschliessend auf [http://localhost:5173](http://localhost:5173). Diese Adresse wird im Browser geöffnet.
 
 ## CI/CD
 
@@ -75,4 +110,3 @@ Der Ordner `docs` ist bereits im Starter-Projekt vorhanden und wird für die Dok
 ## Ziel
 
 Am Ende soll eine funktionsfähige Version von **Schiffe versenken im Browser** vorhanden sein, bei welcher der komplette Entwicklungsprozess von den automatisierten Tests bis zum Deployment über die CI/CD-Pipeline nachvollziehbar ist.
-

@@ -1,5 +1,7 @@
 FROM node:24-alpine
 
+LABEL service="myapp"
+
 WORKDIR /app
 
 COPY package*.json ./

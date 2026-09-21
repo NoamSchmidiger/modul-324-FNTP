@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.3.1](https://github.com/NoamSchmidiger/modul-324-FNTP/compare/v1.3.0...v1.3.1) (2026-09-21)
+
+### Bug Fixes
+
+- **deploy:** add /up health endpoint for kamal-proxy ([#101](https://github.com/NoamSchmidiger/modul-324-FNTP/issues/101)) ([bcc7f62](https://github.com/NoamSchmidiger/modul-324-FNTP/commit/bcc7f6229ebea49a823a73f61f8a7022ebb4329c))
+
 ## [1.3.0](https://github.com/NoamSchmidiger/modul-324-FNTP/compare/v1.2.0...v1.3.0) (2026-09-21)
 
 ### Features

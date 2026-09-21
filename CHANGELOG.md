@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.2](https://github.com/NoamSchmidiger/modul-324-FNTP/compare/v1.3.1...v1.3.2) (2026-09-21)
+
+
+### Bug Fixes
+
+* use backend game API through nginx proxy [#80](https://github.com/NoamSchmidiger/modul-324-FNTP/issues/80) ([f3f1b5b](https://github.com/NoamSchmidiger/modul-324-FNTP/commit/f3f1b5b8016a7d1566bfa5088a604cc7da759b2d))
+
 ## [1.3.1](https://github.com/NoamSchmidiger/modul-324-FNTP/compare/v1.3.0...v1.3.1) (2026-09-21)
 
 ### Bug Fixes

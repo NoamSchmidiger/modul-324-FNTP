@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.4.0](https://github.com/NoamSchmidiger/modul-324-FNTP/compare/v1.3.1...v1.4.0) (2026-10-11)
+
+
+### Features
+
+* add Docker Compose configuration [#80](https://github.com/NoamSchmidiger/modul-324-FNTP/issues/80) ([c66df86](https://github.com/NoamSchmidiger/modul-324-FNTP/commit/c66df8640279571f9529a16ce0fd76e8e63aa5c5))
+* add Docker Compose configuration [#80](https://github.com/NoamSchmidiger/modul-324-FNTP/issues/80) ([e2c9584](https://github.com/NoamSchmidiger/modul-324-FNTP/commit/e2c9584e1d4571943d685dbc4605f517dbda5b0d))
+
+
+### Bug Fixes
+
+* use backend game API through nginx proxy [#80](https://github.com/NoamSchmidiger/modul-324-FNTP/issues/80) ([f3f1b5b](https://github.com/NoamSchmidiger/modul-324-FNTP/commit/f3f1b5b8016a7d1566bfa5088a604cc7da759b2d))
+
 ## [1.3.1](https://github.com/NoamSchmidiger/modul-324-FNTP/compare/v1.3.0...v1.3.1) (2026-09-21)
 
 ### Bug Fixes

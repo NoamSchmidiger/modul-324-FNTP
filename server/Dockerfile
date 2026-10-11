@@ -1,6 +1,6 @@
 FROM node:24-alpine
 
-LABEL service="myapp"
+LABEL service="myapp-backend"
 
 WORKDIR /app
 

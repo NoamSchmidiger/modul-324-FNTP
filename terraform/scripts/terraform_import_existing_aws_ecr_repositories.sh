@@ -1,12 +1,13 @@
 #!/bin/bash
 
-# INFO: 2>&1 : Sendet Errors nach /dev/null, damit das Script nicht beendet wird
-result=$(aws ecr describe-repositories 2>&1)
+import_ecr_repository() {
+  terraform_address="$1"
+  repository_name="$2"
 
-if [ $? -eq 0 ]; then
-  echo "$result" | jq -c ".repositories" | while read -r reservation; do
-    echo "$reservation" | jq -rc ".[].repositoryName" | while read -r repositoryName; do
-      terraform import aws_ecr_repository.myecr "$repositoryName" 2>&1
-    done
-  done
-fi
+  if aws ecr describe-repositories --repository-names "$repository_name" >/dev/null 2>&1; then
+    terraform import "$terraform_address" "$repository_name" 2>&1
+  fi
+}
+
+import_ecr_repository aws_ecr_repository.frontend "m324/myapp-frontend"
+import_ecr_repository aws_ecr_repository.backend "m324/myapp-backend"

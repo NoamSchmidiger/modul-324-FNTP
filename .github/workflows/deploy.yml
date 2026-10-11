@@ -11,7 +11,8 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  DOCKER_IMAGE_NAME: m324/myapp
+  DOCKER_IMAGE_NAME_FRONTEND: m324/myapp-frontend
+  DOCKER_IMAGE_NAME_BACKEND: m324/myapp-backend
 
 permissions:
   contents: read
@@ -69,34 +70,63 @@ jobs:
 
       # Definiert die docker image name und tags
       # Falls es sich um ein Tag handelt wird der Tag verwendet, sonst der git-commit hash
-      - name: Docker meta
-        id: meta
+      - name: Docker meta frontend
+        id: meta-frontend
         uses: docker/metadata-action@v6
         with:
           images: |
-            ${{ steps.login-ecr.outputs.registry }}/${{ env.DOCKER_IMAGE_NAME }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.DOCKER_IMAGE_NAME_FRONTEND }}
+          tags: |
+            type=semver,pattern={{version}},event=tag
+            type=sha,event=branch
+
+      - name: Docker meta backend
+        id: meta-backend
+        uses: docker/metadata-action@v6
+        with:
+          images: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.DOCKER_IMAGE_NAME_BACKEND }}
           tags: |
             type=semver,pattern={{version}},event=tag
             type=sha,event=branch
 
       # Entspricht `docker build .` und `docker push`, nur konfortabler und schneller mit cache
-      - name: Build and push application image to regisrty
+      - name: Build and push frontend image to regisrty
         uses: docker/build-push-action@v7
         with:
           context: ./frontend
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+      - name: Build and push backend image to regisrty
+        uses: docker/build-push-action@v7
+        with:
+          context: ./server
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
 
       # Deployed das erstellte Image nach AWS
-      - name: Kamal deploy image
+      - name: Kamal deploy backend image
         working-directory: kamal
         env:
           KAMAL_SERVER_IP: ${{ env.SERVER_IP }}
           KAMAL_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           KAMAL_REGISTRY_PASSWORD: ${{ steps.login-ecr.outputs[format('docker_password_{0}_dkr_ecr_us_east_1_amazonaws_com', secrets.AWS_ACCOUNT_ID)] }}
-          VERSION: ${{ steps.meta.outputs.version }}
+          VERSION: ${{ steps.meta-backend.outputs.version }}
+        run: |
+          bundle exec kamal deploy -c config/deploy-backend.yml --skip-push --version=$VERSION
+
+      - name: Kamal deploy frontend image
+        working-directory: kamal
+        env:
+          KAMAL_SERVER_IP: ${{ env.SERVER_IP }}
+          KAMAL_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          KAMAL_REGISTRY_PASSWORD: ${{ steps.login-ecr.outputs[format('docker_password_{0}_dkr_ecr_us_east_1_amazonaws_com', secrets.AWS_ACCOUNT_ID)] }}
+          VERSION: ${{ steps.meta-frontend.outputs.version }}
         run: |
           bundle exec kamal deploy --skip-push --version=$VERSION
           echo "Visit me on [http://$KAMAL_SERVER_IP](http://$KAMAL_SERVER_IP) 🚀" >> $GITHUB_STEP_SUMMARY

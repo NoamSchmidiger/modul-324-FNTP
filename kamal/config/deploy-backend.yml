@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=https://json.schemastore.org/yamllint.json
+service: myapp-backend
+
+image: m324/myapp-backend
+
+servers:
+  web:
+    hosts:
+      - <%= ENV.fetch('KAMAL_SERVER_IP') %>
+
+registry:
+  server: <%= ENV.fetch('KAMAL_REGISTRY') || 'not-defined' %>
+  username: AWS
+  password: <%= ENV.fetch('KAMAL_REGISTRY_PASSWORD') || 'not-defined' %>
+
+ssh:
+  user: ubuntu
+
+proxy:
+  app_port: 3000
+  path_prefix: /api
+  strip_path_prefix: true
+  healthcheck:
+    path: /up
+    interval: 2
+    timeout: 2
+
+env:
+  clear:
+    CLIENT_BASE_URL: <%= "http://#{ENV.fetch('KAMAL_SERVER_IP')}" %>
+
+builder:
+  arch: amd64
+

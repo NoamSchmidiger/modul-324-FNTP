@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.0](https://github.com/NoamSchmidiger/modul-324-FNTP/compare/v1.4.0...v1.5.0) (2026-10-12)
+
+### Features
+
+- Separate frontend/backend deployment ([bfcdc99](https://github.com/NoamSchmidiger/modul-324-FNTP/commit/bfcdc99f3d4c9325381c38ae54beb748cd68f679))
+
 ## [1.4.0](https://github.com/NoamSchmidiger/modul-324-FNTP/compare/v1.3.1...v1.4.0) (2026-10-11)
 
 ### Features

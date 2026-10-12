@@ -1,0 +1,129 @@
+###    THIS WAS PARTIALLY GENERATED WITH THE HELP OF AI    ###
+
+# Ablaufzeit eines Spiels.
+#
+# Diese Datei NICHT in einem Rutsch ausfuehren - zwischen Request 2 und 3 muss
+# die Ablaufzeit verstreichen.
+#
+# Server dafuer mit kurzer Ablaufzeit starten:
+#   GAME_TTL_MS=5000 node server.js
+#
+# Ablauf:
+#   1. Request 1 und 2 ausfuehren
+#   2. ca. 6 Sekunden warten
+#   3. Request 3 bis 6 ausfuehren
+
+### 1. Spiel mit kurzer Ablaufzeit erstellen
+# @no-cookie-jar
+# @name startShortLivedGame
+POST {{host}}/games/start
+
+> {%
+    client.test("Spiel wird erstellt", function () {
+        client.assert(response.status === 200, "Status war " + response.status);
+    });
+    client.test("Ablaufzeit ist kurz (Server mit GAME_TTL_MS=5000 gestartet?)", function () {
+        client.assert(
+            response.body.expiresInMs > 0 && response.body.expiresInMs <= 5000,
+            "expiresInMs war " + response.body.expiresInMs +
+            " - laeuft der Server ohne GAME_TTL_MS=5000?"
+        );
+    });
+
+    const setCookie = response.headers.valueOf("Set-Cookie");
+    client.global.set("shortGameId", response.body.gameSessionId);
+    client.global.set("shortGameSession", setCookie.match(/SESSION_ID=([^;]+)/)[1]);
+%}
+
+### 2. Solange das Spiel laeuft, ist es normal abrufbar
+# @no-cookie-jar
+# @name gameStillAlive
+GET {{host}}/games/{{shortGameId}}
+
+> {%
+    client.test("Spiel ist noch da", function () {
+        client.assert(response.status === 200, "Status war " + response.status);
+    });
+    client.test("Restlaufzeit zaehlt herunter", function () {
+        client.assert(
+            response.body.expiresInMs <= 5000,
+            "expiresInMs war " + response.body.expiresInMs
+        );
+    });
+    client.log("Restlaufzeit: " + response.body.expiresInMs + " ms - jetzt ca. 6 Sekunden warten.");
+%}
+
+### 3. Nach dem Warten: abgelaufenes Spiel abrufen
+# Erwartet 410 (abgelaufen) oder 404, falls der Cleanup-Interval die Partie
+# bereits aus dem Speicher entfernt hat. Beides ist korrektes Verhalten.
+# @no-cookie-jar
+# @name expiredGameInfo
+GET {{host}}/games/{{shortGameId}}
+
+> {%
+    client.test("Abgelaufenes Spiel ist nicht mehr nutzbar", function () {
+        client.assert(
+            response.status === 410 || response.status === 404,
+            "Status war " + response.status + " - wurde lange genug gewartet?"
+        );
+    });
+    client.test("Passende Fehlermeldung", function () {
+        client.assert(
+            response.body.error === "Dieses Spiel ist abgelaufen" ||
+            response.body.error === "Dieses Spiel existiert nicht",
+            "Meldung war: " + response.body.error
+        );
+    });
+%}
+
+### 4. Beitreten zu einem abgelaufenen Spiel ist nicht moeglich
+# @no-cookie-jar
+# @name joinExpiredGame
+POST {{host}}/games/{{shortGameId}}/join
+
+> {%
+    client.test("Kein Beitritt nach Ablauf", function () {
+        client.assert(
+            response.status === 410 || response.status === 404,
+            "Status war " + response.status
+        );
+    });
+%}
+
+### 5. Auch der eigene Spielstand ist weg
+# @no-cookie-jar
+# @name expiredGameState
+GET {{host}}/games/{{shortGameId}}/state
+Cookie: SESSION_ID={{shortGameSession}}
+
+> {%
+    client.test("Kein Spielstand nach Ablauf", function () {
+        client.assert(
+            response.status === 410 || response.status === 404,
+            "Status war " + response.status
+        );
+    });
+%}
+
+### 6. Nach dem Ablauf darf dieselbe Session ein neues Spiel starten
+# Das ist der eigentliche Zweck des Aufraeumens: die alte Partie blockiert
+# die Session nicht mehr.
+# @no-cookie-jar
+# @name startAfterExpiry
+POST {{host}}/games/start
+Cookie: SESSION_ID={{shortGameSession}}
+
+> {%
+    client.test("Neues Spiel ist moeglich", function () {
+        client.assert(
+            response.status === 200,
+            "Status war " + response.status + ": " + JSON.stringify(response.body)
+        );
+    });
+    client.test("Es ist wirklich eine neue Partie", function () {
+        client.assert(
+            response.body.gameSessionId !== client.global.get("shortGameId"),
+            "Es wurde dieselbe gameSessionId geliefert"
+        );
+    });
+%}

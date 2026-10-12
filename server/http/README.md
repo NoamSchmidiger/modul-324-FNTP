@@ -28,12 +28,12 @@ http://localhost:3000` definiert. Vor dem ersten Request oben rechts im Editor
 
 ## Reihenfolge
 
-| Datei | Inhalt | Voraussetzung |
-| --- | --- | --- |
-| `01-happy-path.http` | Spiel erstellen, Einladungslink, Beitritt, beide Flotten platzieren, Spielstart | – |
-| `02-fehlerfaelle.http` | 404 / 403 / 409, Flotten-Validierung | 01 vorher laufen lassen |
-| `03-ablaufzeit.http` | Ablauf einer Partie, 410, danach neues Spiel möglich | Server mit `GAME_TTL_MS=5000`, manuelle Wartezeit |
-| `04-schuesse-socketio.http` | Schüsse, Zugwechsel, Treffer/Wasser/versenkt über Socket.IO | 01 vorher laufen lassen |
+| Datei                       | Inhalt                                                                          | Voraussetzung                                     |
+| --------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `01-happy-path.http`        | Spiel erstellen, Einladungslink, Beitritt, beide Flotten platzieren, Spielstart | –                                                 |
+| `02-fehlerfaelle.http`      | 404 / 403 / 409, Flotten-Validierung                                            | 01 vorher laufen lassen                           |
+| `03-ablaufzeit.http`        | Ablauf einer Partie, 410, danach neues Spiel möglich                            | Server mit `GAME_TTL_MS=5000`, manuelle Wartezeit |
+| `04-schuesse-socketio.http` | Schüsse, Zugwechsel, Treffer/Wasser/versenkt über Socket.IO                     | 01 vorher laufen lassen                           |
 
 Die Dateien geben Werte über `client.global.set(...)` weiter (`gameId`,
 `player1Session`, `player2Session`, …). Diese Variablen überleben innerhalb
@@ -62,14 +62,14 @@ Projektordner zu löschen.
 Der HTTP Client spricht kein Socket.IO. `04-schuesse-socketio.http` nutzt
 deshalb den Polling-Transport von Engine.IO und schickt die Pakete von Hand:
 
-| Paket | Bedeutung |
-| --- | --- |
-| `0{...}` | OPEN, Antwort auf den Handshake, enthält die `sid` |
-| `40{...}` | CONNECT, der JSON-Teil landet in `socket.handshake.auth` |
-| `42["event",{...}]` | Event ohne Acknowledgement |
-| `42<id>["event",{...}]` | Event mit Acknowledgement-Id |
-| `43<id>[{...}]` | ACK, die Antwort des Servers auf dieses Event |
-| `2` / `3` | Ping (Server) / Pong (Client) |
+| Paket                   | Bedeutung                                                |
+| ----------------------- | -------------------------------------------------------- |
+| `0{...}`                | OPEN, Antwort auf den Handshake, enthält die `sid`       |
+| `40{...}`               | CONNECT, der JSON-Teil landet in `socket.handshake.auth` |
+| `42["event",{...}]`     | Event ohne Acknowledgement                               |
+| `42<id>["event",{...}]` | Event mit Acknowledgement-Id                             |
+| `43<id>[{...}]`         | ACK, die Antwort des Servers auf dieses Event            |
+| `2` / `3`               | Ping (Server) / Pong (Client)                            |
 
 Das Session-Cookie muss beim **Handshake-GET** mitkommen — daraus baut
 Socket.IO `socket.handshake` und darüber findet `io.use()` den Spieler.

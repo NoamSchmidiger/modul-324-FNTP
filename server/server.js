@@ -9,8 +9,11 @@ const port = 3000;
 app.use(cookieParser());
 app.use(express.json());
 
-// Für Tests kann die Ablaufzeit über die Umgebungsvariable verkürzt werden.
-const GAME_TTL_MS = Number(process.env.GAME_TTL_MS) || 1000 * 60 * 60;
+app.get("/up", (req, res) => {
+  res.status(200).type("text/plain").send("OK");
+});
+
+const GAME_TTL_MS = 1000 * 60 * 60;
 const CLEANUP_INTERVAL_MS = 1000 * 60;
 const CLIENT_BASE_URL = process.env.CLIENT_BASE_URL || "http://localhost:5173";
 

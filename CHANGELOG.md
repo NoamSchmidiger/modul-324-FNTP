@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.4.0](https://github.com/NoamSchmidiger/modul-324-FNTP/compare/v1.3.1...v1.4.0) (2026-10-11)
+
+### Features
+
+- add Docker Compose configuration [#80](https://github.com/NoamSchmidiger/modul-324-FNTP/issues/80) ([c66df86](https://github.com/NoamSchmidiger/modul-324-FNTP/commit/c66df8640279571f9529a16ce0fd76e8e63aa5c5))
+- add Docker Compose configuration [#80](https://github.com/NoamSchmidiger/modul-324-FNTP/issues/80) ([e2c9584](https://github.com/NoamSchmidiger/modul-324-FNTP/commit/e2c9584e1d4571943d685dbc4605f517dbda5b0d))
+
+### Bug Fixes
+
+- use backend game API through nginx proxy [#80](https://github.com/NoamSchmidiger/modul-324-FNTP/issues/80) ([f3f1b5b](https://github.com/NoamSchmidiger/modul-324-FNTP/commit/f3f1b5b8016a7d1566bfa5088a604cc7da759b2d))
+
+## [1.3.1](https://github.com/NoamSchmidiger/modul-324-FNTP/compare/v1.3.0...v1.3.1) (2026-09-21)
+
+### Bug Fixes
+
+- **deploy:** add /up health endpoint for kamal-proxy ([#101](https://github.com/NoamSchmidiger/modul-324-FNTP/issues/101)) ([bcc7f62](https://github.com/NoamSchmidiger/modul-324-FNTP/commit/bcc7f6229ebea49a823a73f61f8a7022ebb4329c))
+
+## [1.3.0](https://github.com/NoamSchmidiger/modul-324-FNTP/compare/v1.2.0...v1.3.0) (2026-09-21)
+
+### Features
+
+- add .dockerignore file [#78](https://github.com/NoamSchmidiger/modul-324-FNTP/issues/78) ([21d1963](https://github.com/NoamSchmidiger/modul-324-FNTP/commit/21d19633f05ae56ecdbd804ca1c9570cd52f6c9d))
+- add .dockerignore file [#78](https://github.com/NoamSchmidiger/modul-324-FNTP/issues/78) ([eaa612b](https://github.com/NoamSchmidiger/modul-324-FNTP/commit/eaa612bdc4517c67f5ff7ec27ca7f78d9734e0ae))
+- add Dockerfile for backend ([3fe4a0c](https://github.com/NoamSchmidiger/modul-324-FNTP/commit/3fe4a0cb9f0c4d640ce8aef51398340ebc5452fe))
+- add initial Kamal setup with deployment configuration and documentation ([02e8e14](https://github.com/NoamSchmidiger/modul-324-FNTP/commit/02e8e148431f2335ab88c91127dd8e450feba38a))
+
 ## [1.2.0](https://github.com/NoamSchmidiger/modul-324-FNTP/compare/v1.1.0...v1.2.0) (2026-09-16)
 
 ### Features

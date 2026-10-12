@@ -7,6 +7,10 @@ const port = 3000;
 app.use(cookieParser());
 app.use(express.json());
 
+app.get("/up", (req, res) => {
+  res.status(200).type("text/plain").send("OK");
+});
+
 const GAME_TTL_MS = 1000 * 60 * 60;
 const CLEANUP_INTERVAL_MS = 1000 * 60;
 const CLIENT_BASE_URL = process.env.CLIENT_BASE_URL || "http://localhost:5173";

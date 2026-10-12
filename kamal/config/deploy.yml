@@ -1,11 +1,11 @@
 # yaml-language-server: $schema=https://json.schemastore.org/yamllint.json
 # Name der Applikation
 # WARNING: muss gleich sein zum Label "service" des zu deployende Dockerfile
-#          siehe: `../../app/Dockerfile`
-service: myapp
+#          siehe: `../../frontend/Dockerfile`
+service: myapp-frontend
 
 # Name vom Container-Image
-image: m324/myapp
+image: m324/myapp-frontend
 
 # Auf diesen Server deployen
 # INFO: Wir verwenden die öffentliche IP der AWS-VM via CI-Pipeline

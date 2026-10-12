@@ -1,0 +1,246 @@
+###    THIS WAS PARTIALLY GENERATED WITH THE HELP OF AI    ###
+
+# Ablauf einer Partie von der Erstellung bis zum Spielstart.
+#
+# Diese Datei als Ganzes ausfuehren (Run all requests in file), danach kann
+# 04-schuesse-socketio.http die Variablen gameId / player1Session / player2Session
+# weiterverwenden.
+#
+# Jeder Request hat @no-cookie-jar, damit der HTTP-Client keine Cookies speichert.
+###
+# @no-cookie-jar
+# @name startGame
+POST {{host}}/games/start
+
+> {%
+    client.test("Spiel wird erstellt", function () {
+        client.assert(response.status === 200, "Status war " + response.status);
+    });
+    client.test("Antwort enthaelt Spiel-ID und Einladungslink", function () {
+        client.assert(Boolean(response.body.gameSessionId), "gameSessionId fehlt");
+        client.assert(
+            response.body.inviteUrl.endsWith(response.body.gameSessionId),
+            "inviteUrl passt nicht zur gameSessionId: " + response.body.inviteUrl
+        );
+    });
+    client.test("Spiel wartet auf den zweiten Spieler", function () {
+        client.assert(
+            response.body.phase === "WAITING_FOR_PLAYER",
+            "Phase war " + response.body.phase
+        );
+    });
+    client.test("Ablaufzeit ist gesetzt", function () {
+        client.assert(Boolean(response.body.expiresAt), "expiresAt fehlt");
+        client.assert(response.body.expiresInMs > 0, "expiresInMs war " + response.body.expiresInMs);
+    });
+    client.test("Flotte und Spielfeldgroesse werden mitgeliefert", function () {
+        client.assert(response.body.fleet.length === 5, "Flotte hat " + response.body.fleet.length + " Schiffe");
+        client.assert(response.body.boardSize === 10, "boardSize war " + response.body.boardSize);
+    });
+
+    const setCookie = response.headers.valueOf("Set-Cookie");
+    client.assert(setCookie !== null, "Kein Set-Cookie im Response");
+    client.global.set("gameId", response.body.gameSessionId);
+    client.global.set("player1Session", setCookie.match(/SESSION_ID=([^;]+)/)[1]);
+%}
+
+### Einladungsseite liest die oeffentlichen Infos (ohne Session aufrufbar)
+# @no-cookie-jar
+# @name gameInfoBeforeJoin
+GET {{host}}/games/{{gameId}}
+
+> {%
+    client.test("Infos sind ohne Session abrufbar", function () {
+        client.assert(response.status === 200, "Status war " + response.status);
+    });
+    client.test("Spiel ist beitretbar und hat einen Spieler", function () {
+        client.assert(response.body.joinable === true, "joinable war " + response.body.joinable);
+        client.assert(response.body.playerCount === 1, "playerCount war " + response.body.playerCount);
+    });
+    client.test("Noch niemand am Zug, kein Sieger", function () {
+        client.assert(response.body.turn === null, "turn war " + response.body.turn);
+        client.assert(response.body.winner === null, "winner war " + response.body.winner);
+    });
+%}
+
+### Spieler 2 tritt ueber den Einladungslink bei (ohne Cookie -> neue Session)
+# @no-cookie-jar
+# @name joinGame
+POST {{host}}/games/{{gameId}}/join
+
+> {%
+    client.test("Beitritt klappt", function () {
+        client.assert(response.status === 200, "Status war " + response.status);
+        client.assert(response.body.alreadyJoined === false, "alreadyJoined war true");
+    });
+    client.test("Beide Spieler koennen jetzt platzieren", function () {
+        client.assert(
+            response.body.phase === "PLACING_SHIPS",
+            "Phase war " + response.body.phase
+        );
+    });
+
+    const setCookie = response.headers.valueOf("Set-Cookie");
+    client.assert(setCookie !== null, "Spieler 2 hat keine Session erhalten");
+    client.global.set("player2Session", setCookie.match(/SESSION_ID=([^;]+)/)[1]);
+
+    client.assert(
+        client.global.get("player1Session") !== client.global.get("player2Session"),
+        "Beide Spieler haben dieselbe Session - laeuft der Cookie-Jar mit?"
+    );
+%}
+
+### Erneuter Aufruf des Einladungslinks durch Spieler 2 ist harmlos (Reload)
+# @no-cookie-jar
+# @name joinAgain
+POST {{host}}/games/{{gameId}}/join
+Cookie: SESSION_ID={{player2Session}}
+
+> {%
+    client.test("Reload fuehrt nicht zu einem Fehler", function () {
+        client.assert(response.status === 200, "Status war " + response.status);
+        client.assert(response.body.alreadyJoined === true, "alreadyJoined war false");
+    });
+%}
+
+### Spiel ist jetzt voll
+# @no-cookie-jar
+# @name gameInfoAfterJoin
+GET {{host}}/games/{{gameId}}
+
+> {%
+    client.test("Zwei Spieler, kein weiterer Beitritt moeglich", function () {
+        client.assert(response.body.playerCount === 2, "playerCount war " + response.body.playerCount);
+        client.assert(response.body.joinable === false, "joinable war " + response.body.joinable);
+    });
+%}
+
+### Spieler 1 platziert seine Flotte (waagrecht, linke Haelfte)
+# @no-cookie-jar
+# @name placeShipsPlayer1
+POST {{host}}/games/{{gameId}}/ships
+Content-Type: application/json
+Cookie: SESSION_ID={{player1Session}}
+
+{
+  "ships": [
+    { "x": 0, "y": 0, "size": 5, "orientation": "horizontal" },
+    { "x": 0, "y": 2, "size": 4, "orientation": "horizontal" },
+    { "x": 0, "y": 4, "size": 3, "orientation": "horizontal" },
+    { "x": 0, "y": 6, "size": 3, "orientation": "horizontal" },
+    { "x": 0, "y": 8, "size": 2, "orientation": "horizontal" }
+  ]
+}
+
+> {%
+    client.test("Flotte wird angenommen", function () {
+        client.assert(response.status === 200, "Status war " + response.status + ": " + JSON.stringify(response.body));
+    });
+    client.test("Es wird auf den Gegner gewartet", function () {
+        client.assert(response.body.phase === "PLACING_SHIPS", "Phase war " + response.body.phase);
+        client.assert(response.body.waitingForOpponent === true, "waitingForOpponent war false");
+        client.assert(response.body.opponentPlaced === false, "opponentPlaced war true");
+    });
+    client.test("Trefferzaehler starten bei 0", function () {
+        client.assert(
+            response.body.yourShips.every(function (ship) { return ship.hits === 0; }),
+            "hits nicht initialisiert: " + JSON.stringify(response.body.yourShips)
+        );
+    });
+%}
+
+### Spieler 1 darf nicht zweimal platzieren
+# @no-cookie-jar
+# @name placeShipsTwice
+POST {{host}}/games/{{gameId}}/ships
+Content-Type: application/json
+Cookie: SESSION_ID={{player1Session}}
+
+{
+  "ships": [
+    { "x": 5, "y": 0, "size": 5, "orientation": "horizontal" },
+    { "x": 5, "y": 2, "size": 4, "orientation": "horizontal" },
+    { "x": 5, "y": 4, "size": 3, "orientation": "horizontal" },
+    { "x": 5, "y": 6, "size": 3, "orientation": "horizontal" },
+    { "x": 5, "y": 8, "size": 2, "orientation": "horizontal" }
+  ]
+}
+
+> {%
+    client.test("Zweites Platzieren wird abgelehnt", function () {
+        client.assert(response.status === 409, "Status war " + response.status);
+        client.assert(
+            response.body.error === "Sie haben Ihre Schiffe bereits platziert",
+            "Meldung war: " + response.body.error
+        );
+    });
+%}
+
+### Spieler 2 platziert seine Flotte (senkrecht) -> das Spiel beginnt
+# @no-cookie-jar
+# @name placeShipsPlayer2
+POST {{host}}/games/{{gameId}}/ships
+Content-Type: application/json
+Cookie: SESSION_ID={{player2Session}}
+
+{
+  "ships": [
+    { "x": 9, "y": 0, "size": 5, "orientation": "vertical" },
+    { "x": 7, "y": 0, "size": 4, "orientation": "vertical" },
+    { "x": 5, "y": 0, "size": 3, "orientation": "vertical" },
+    { "x": 3, "y": 0, "size": 3, "orientation": "vertical" },
+    { "x": 1, "y": 0, "size": 2, "orientation": "vertical" }
+  ]
+}
+
+> {%
+    client.test("Flotte wird angenommen", function () {
+        client.assert(response.status === 200, "Status war " + response.status + ": " + JSON.stringify(response.body));
+    });
+    client.test("Das Spiel beginnt", function () {
+        client.assert(response.body.phase === "IN_PROGRESS", "Phase war " + response.body.phase);
+        client.assert(response.body.waitingForOpponent === false, "waitingForOpponent war true");
+    });
+    client.test("Spieler 1 ist am Zug", function () {
+        client.assert(response.body.turn === "first", "turn war " + response.body.turn);
+    });
+%}
+
+### Stand aus Sicht von Spieler 1
+# @no-cookie-jar
+# @name statePlayer1
+GET {{host}}/games/{{gameId}}/state
+Cookie: SESSION_ID={{player1Session}}
+
+> {%
+    client.test("Spieler 1 ist 'first' und am Zug", function () {
+        client.assert(response.body.yourRole === "first", "yourRole war " + response.body.yourRole);
+        client.assert(response.body.yourTurn === true, "yourTurn war false");
+    });
+    client.test("Eigene Flotte sichtbar, Gegnerflotte nicht", function () {
+        client.assert(response.body.yourShips.length === 5, "yourShips: " + JSON.stringify(response.body.yourShips));
+        client.assert(response.body.opponentShips === null, "Die Gegnerflotte wurde ausgeliefert!");
+        client.assert(response.body.opponentPlaced === true, "opponentPlaced war false");
+    });
+    client.test("Noch keine Schuesse", function () {
+        client.assert(response.body.yourShots.length === 0, "yourShots: " + JSON.stringify(response.body.yourShots));
+        client.assert(response.body.opponentShots.length === 0, "opponentShots: " + JSON.stringify(response.body.opponentShots));
+    });
+%}
+
+### Stand aus Sicht von Spieler 2
+# @no-cookie-jar
+# @name statePlayer2
+GET {{host}}/games/{{gameId}}/state
+Cookie: SESSION_ID={{player2Session}}
+
+> {%
+    client.test("Spieler 2 ist 'second' und nicht am Zug", function () {
+        client.assert(response.body.yourRole === "second", "yourRole war " + response.body.yourRole);
+        client.assert(response.body.yourTurn === false, "yourTurn war true");
+        client.assert(response.body.turn === "first", "turn war " + response.body.turn);
+    });
+    client.test("Gegnerflotte bleibt verborgen", function () {
+        client.assert(response.body.opponentShips === null, "Die Gegnerflotte wurde ausgeliefert!");
+    });
+%}

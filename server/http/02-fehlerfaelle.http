@@ -1,0 +1,308 @@
+###    THIS WAS PARTIALLY GENERATED WITH THE HELP OF AI    ###
+
+# Fehlerfaelle und Flotten-Validierung.
+#
+# Voraussetzung: 01-happy-path.http wurde vorher ausgefuehrt, damit gameId,
+# player1Session und player2Session gesetzt sind. Die Validierungs-Tests weiter
+# unten erstellen sich ihr eigenes Spiel und laufen auch alleine.
+
+### Unbekanntes Spiel -> 404
+# @no-cookie-jar
+# @name unknownGame
+GET {{host}}/games/00000000-0000-0000-0000-000000000000
+
+> {%
+    client.test("Unbekanntes Spiel ergibt 404", function () {
+        client.assert(response.status === 404, "Status war " + response.status);
+        client.assert(
+            response.body.error === "Dieses Spiel existiert nicht",
+            "Meldung war: " + response.body.error
+        );
+    });
+%}
+
+### Stand abfragen ohne Session -> 403
+# @no-cookie-jar
+# @name stateWithoutSession
+GET {{host}}/games/{{gameId}}/state
+
+> {%
+    client.test("Ohne Session kein Zugriff auf den Spielstand", function () {
+        client.assert(response.status === 403, "Status war " + response.status);
+        client.assert(
+            response.body.error === "Sie sind kein Spieler dieser Partie",
+            "Meldung war: " + response.body.error
+        );
+    });
+%}
+
+### Volles Spiel: ein Dritter will beitreten -> 409
+# @no-cookie-jar
+# @name joinFullGame
+POST {{host}}/games/{{gameId}}/join
+
+> {%
+    client.test("Drittem Spieler wird der Beitritt verweigert", function () {
+        client.assert(response.status === 409, "Status war " + response.status);
+        client.assert(
+            response.body.error === "Dieses Spiel ist bereits voll",
+            "Meldung war: " + response.body.error
+        );
+    });
+%}
+
+### Spieler 1 will ein zweites Spiel starten -> 409
+# @no-cookie-jar
+# @name startSecondGame
+POST {{host}}/games/start
+Cookie: SESSION_ID={{player1Session}}
+
+> {%
+    client.test("Zweites Spiel wird blockiert", function () {
+        client.assert(response.status === 409, "Status war " + response.status);
+        client.assert(
+            response.body.error === "Beenden Sie zuerst das andere Spiel",
+            "Meldung war: " + response.body.error
+        );
+    });
+    // Achtung: aktuell gibt es keinen Endpoint, um ein Spiel zu beenden.
+    // Diese Session bleibt bis zum Ablauf der Partie blockiert.
+%}
+
+### Eigenes Spiel fuer die Validierungs-Tests
+# @no-cookie-jar
+# @name startValidationGame
+POST {{host}}/games/start
+
+> {%
+    client.test("Testspiel wird erstellt", function () {
+        client.assert(response.status === 200, "Status war " + response.status);
+    });
+    const setCookie = response.headers.valueOf("Set-Cookie");
+    client.global.set("validationGameId", response.body.gameSessionId);
+    client.global.set("player3Session", setCookie.match(/SESSION_ID=([^;]+)/)[1]);
+%}
+
+### Fremde Session darf nicht platzieren -> 403
+# @no-cookie-jar
+# @name placeAsStranger
+POST {{host}}/games/{{validationGameId}}/ships
+Content-Type: application/json
+Cookie: SESSION_ID={{player1Session}}
+
+{
+  "ships": [
+    { "x": 0, "y": 0, "size": 5, "orientation": "horizontal" },
+    { "x": 0, "y": 2, "size": 4, "orientation": "horizontal" },
+    { "x": 0, "y": 4, "size": 3, "orientation": "horizontal" },
+    { "x": 0, "y": 6, "size": 3, "orientation": "horizontal" },
+    { "x": 0, "y": 8, "size": 2, "orientation": "horizontal" }
+  ]
+}
+
+> {%
+    client.test("Nur Spieler der Partie duerfen platzieren", function () {
+        client.assert(response.status === 403, "Status war " + response.status);
+        client.assert(
+            response.body.error === "Sie sind kein Spieler dieser Partie",
+            "Meldung war: " + response.body.error
+        );
+    });
+%}
+
+### Zu wenige Schiffe -> 400
+# @no-cookie-jar
+# @name tooFewShips
+POST {{host}}/games/{{validationGameId}}/ships
+Content-Type: application/json
+Cookie: SESSION_ID={{player3Session}}
+
+{
+  "ships": [
+    { "x": 0, "y": 0, "size": 5, "orientation": "horizontal" },
+    { "x": 0, "y": 2, "size": 4, "orientation": "horizontal" }
+  ]
+}
+
+> {%
+    client.test("Unvollstaendige Flotte wird abgelehnt", function () {
+        client.assert(response.status === 400, "Status war " + response.status);
+        client.assert(
+            response.body.error === "Es müssen genau 5 Schiffe platziert werden",
+            "Meldung war: " + response.body.error
+        );
+    });
+%}
+
+### Falsche Schiffsgroessen (fuenf Zweier) -> 400
+# @no-cookie-jar
+# @name wrongSizes
+POST {{host}}/games/{{validationGameId}}/ships
+Content-Type: application/json
+Cookie: SESSION_ID={{player3Session}}
+
+{
+  "ships": [
+    { "x": 0, "y": 0, "size": 2, "orientation": "horizontal" },
+    { "x": 0, "y": 2, "size": 2, "orientation": "horizontal" },
+    { "x": 0, "y": 4, "size": 2, "orientation": "horizontal" },
+    { "x": 0, "y": 6, "size": 2, "orientation": "horizontal" },
+    { "x": 0, "y": 8, "size": 2, "orientation": "horizontal" }
+  ]
+}
+
+> {%
+    client.test("Falsche Flottenzusammensetzung wird abgelehnt", function () {
+        client.assert(response.status === 400, "Status war " + response.status);
+        client.assert(
+            response.body.error.indexOf("Längen") !== -1,
+            "Meldung war: " + response.body.error
+        );
+    });
+%}
+
+### Ueberlappende Schiffe -> 400
+# @no-cookie-jar
+# @name overlappingShips
+POST {{host}}/games/{{validationGameId}}/ships
+Content-Type: application/json
+Cookie: SESSION_ID={{player3Session}}
+
+{
+  "ships": [
+    { "x": 0, "y": 0, "size": 5, "orientation": "horizontal" },
+    { "x": 2, "y": 0, "size": 4, "orientation": "horizontal" },
+    { "x": 0, "y": 4, "size": 3, "orientation": "horizontal" },
+    { "x": 0, "y": 6, "size": 3, "orientation": "horizontal" },
+    { "x": 0, "y": 8, "size": 2, "orientation": "horizontal" }
+  ]
+}
+
+> {%
+    client.test("Ueberlappung wird erkannt", function () {
+        client.assert(response.status === 400, "Status war " + response.status);
+        client.assert(
+            response.body.error === "Schiffe dürfen sich nicht überlappen",
+            "Meldung war: " + response.body.error
+        );
+    });
+%}
+
+### Schiff ragt aus dem Spielfeld -> 400
+# @no-cookie-jar
+# @name shipOutOfBounds
+POST {{host}}/games/{{validationGameId}}/ships
+Content-Type: application/json
+Cookie: SESSION_ID={{player3Session}}
+
+{
+  "ships": [
+    { "x": 8, "y": 0, "size": 5, "orientation": "horizontal" },
+    { "x": 0, "y": 2, "size": 4, "orientation": "horizontal" },
+    { "x": 0, "y": 4, "size": 3, "orientation": "horizontal" },
+    { "x": 0, "y": 6, "size": 3, "orientation": "horizontal" },
+    { "x": 0, "y": 8, "size": 2, "orientation": "horizontal" }
+  ]
+}
+
+> {%
+    client.test("Schiff ausserhalb des Spielfelds wird abgelehnt", function () {
+        client.assert(response.status === 400, "Status war " + response.status);
+        client.assert(
+            response.body.error.indexOf("Spielfeld") !== -1,
+            "Meldung war: " + response.body.error
+        );
+    });
+%}
+
+### Ungueltige Orientierung -> 400
+# @no-cookie-jar
+# @name invalidOrientation
+POST {{host}}/games/{{validationGameId}}/ships
+Content-Type: application/json
+Cookie: SESSION_ID={{player3Session}}
+
+{
+  "ships": [
+    { "x": 0, "y": 0, "size": 5, "orientation": "diagonal" },
+    { "x": 0, "y": 2, "size": 4, "orientation": "horizontal" },
+    { "x": 0, "y": 4, "size": 3, "orientation": "horizontal" },
+    { "x": 0, "y": 6, "size": 3, "orientation": "horizontal" },
+    { "x": 0, "y": 8, "size": 2, "orientation": "horizontal" }
+  ]
+}
+
+> {%
+    client.test("Diagonale Schiffe gibt es nicht", function () {
+        client.assert(response.status === 400, "Status war " + response.status);
+        client.assert(
+            response.body.error.indexOf("orientation") !== -1,
+            "Meldung war: " + response.body.error
+        );
+    });
+%}
+
+### Koordinaten keine ganzen Zahlen -> 400
+# @no-cookie-jar
+# @name nonIntegerCoordinates
+POST {{host}}/games/{{validationGameId}}/ships
+Content-Type: application/json
+Cookie: SESSION_ID={{player3Session}}
+
+{
+  "ships": [
+    { "x": 0.5, "y": 0, "size": 5, "orientation": "horizontal" },
+    { "x": 0, "y": 2, "size": 4, "orientation": "horizontal" },
+    { "x": 0, "y": 4, "size": 3, "orientation": "horizontal" },
+    { "x": 0, "y": 6, "size": 3, "orientation": "horizontal" },
+    { "x": 0, "y": 8, "size": 2, "orientation": "horizontal" }
+  ]
+}
+
+> {%
+    client.test("Kommazahlen werden abgelehnt", function () {
+        client.assert(response.status === 400, "Status war " + response.status);
+        client.assert(
+            response.body.error === "x, y und size müssen ganze Zahlen sein",
+            "Meldung war: " + response.body.error
+        );
+    });
+%}
+
+### Leerer Body -> 400
+# @no-cookie-jar
+# @name emptyBody
+POST {{host}}/games/{{validationGameId}}/ships
+Content-Type: application/json
+Cookie: SESSION_ID={{player3Session}}
+
+{}
+
+> {%
+    client.test("Fehlende Schiffsliste wird abgelehnt", function () {
+        client.assert(response.status === 400, "Status war " + response.status);
+        client.assert(
+            response.body.error === "Es müssen genau 5 Schiffe platziert werden",
+            "Meldung war: " + response.body.error
+        );
+    });
+%}
+
+### Nach all den Fehlversuchen ist noch nichts platziert
+# @no-cookie-jar
+# @name validationGameState
+GET {{host}}/games/{{validationGameId}}/state
+Cookie: SESSION_ID={{player3Session}}
+
+> {%
+    client.test("Ungueltige Flotten wurden nicht gespeichert", function () {
+        client.assert(response.body.youArePlaced === false, "youArePlaced war true");
+        client.assert(response.body.yourShips === null, "yourShips: " + JSON.stringify(response.body.yourShips));
+    });
+    client.test("Spiel wartet weiterhin auf einen Gegner", function () {
+        client.assert(
+            response.body.phase === "WAITING_FOR_PLAYER",
+            "Phase war " + response.body.phase
+        );
+    });
+%}

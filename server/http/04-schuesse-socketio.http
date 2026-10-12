@@ -1,0 +1,470 @@
+###    THIS WAS PARTIALLY GENERATED WITH THE HELP OF AI    ###
+
+# Schuesse und Zugwechsel ueber Socket.IO.
+#
+# Der HTTP-Client kann kein Socket.IO sprechen, aber Socket.IO laeuft auch ueber
+# HTTP-Polling (Engine.IO). Genau das nutzt diese Datei: jeder Request ist ein
+# Engine.IO-Paket.
+#
+# Paketformat (Engine.IO 4 + Socket.IO 5):
+#   0{...}                        OPEN, Antwort auf den Handshake, enthaelt die sid
+#   40{...}                       CONNECT, der JSON-Teil ist socket.handshake.auth
+#   42["event",{...}]             EVENT ohne Acknowledgement
+#   42<id>["event",{...}]         EVENT mit Acknowledgement-Id
+#   43<id>[{...}]                 ACK (die Antwort des Servers auf dieses Event)
+#   2 / 3                         Ping (Server) / Pong (Client)
+#
+# WICHTIG:
+#   - Vorher 01-happy-path.http ausfuehren, damit gameId, player1Session und
+#     player2Session gesetzt sind und die Partie in der Phase IN_PROGRESS ist.
+#   - Diese Datei am besten komplett ausfuehren (Run all requests in file).
+#     Klickt man die Requests einzeln und langsam durch, wirft Engine.IO die
+#     Verbindung nach ca. 45 Sekunden weg (Ping/Pong). Der letzte Request in
+#     dieser Datei zeigt, wie man ein Pong nachschickt.
+#   - Ein GET-Poll ohne wartende Nachrichten haengt bis zu 25 Sekunden (Long
+#     Polling). Darum wird nur gepollt, wenn auch etwas abzuholen ist.
+#
+# Flotte von Spieler 2 (Ziel von Spieler 1), alle senkrecht ab y=0:
+#   x=9 Traeger (5)  x=7 Schlachtschiff (4)  x=5 Kreuzer (3)
+#   x=3 U-Boot (3)   x=1 Zerstoerer (2) -> (1,0) und (1,1)
+# Flotte von Spieler 1 (Ziel von Spieler 2), alle waagrecht ab x=0:
+#   y=0 Traeger (5)  y=2 Schlachtschiff (4)  y=4 Kreuzer (3)
+#   y=6 U-Boot (3)   y=8 Zerstoerer (2)
+
+### Handshake Spieler 1 - das Session-Cookie muss hier mitkommen
+# @no-cookie-jar
+# @name handshakePlayer1
+GET {{host}}/socket.io/?EIO=4&transport=polling
+Cookie: SESSION_ID={{player1Session}}
+
+> {%
+    const body = String(response.body);
+    client.test("Handshake liefert ein OPEN-Paket", function () {
+        client.assert(response.status === 200, "Status war " + response.status);
+        client.assert(body.charAt(0) === "0", "Kein OPEN-Paket: " + body);
+    });
+    client.global.set("sidPlayer1", body.match(/"sid":"([^"]+)"/)[1]);
+%}
+
+### Spieler 1 verbindet sich mit der Partie (hier laeuft io.use() durch)
+# @no-cookie-jar
+# @name connectPlayer1
+POST {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer1}}
+Content-Type: text/plain;charset=UTF-8
+
+40{"gameSessionId":"{{gameId}}"}
+
+> {%
+    client.test("Paket wird angenommen", function () {
+        client.assert(response.status === 200, "Status war " + response.status);
+    });
+%}
+
+### Spieler 1 holt CONNECT-Bestaetigung und den gepushten Spielstand ab
+# @no-cookie-jar
+# @name pollPlayer1AfterConnect
+GET {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer1}}
+
+> {%
+    const body = String(response.body);
+    client.test("Verbindung wurde akzeptiert", function () {
+        client.assert(
+            body.indexOf("44") === -1,
+            "Verbindung abgelehnt (CONNECT_ERROR): " + body
+        );
+        client.assert(body.indexOf("40") !== -1, "Keine CONNECT-Bestaetigung: " + body);
+    });
+    client.test("Der Server pusht den Spielstand", function () {
+        client.assert(body.indexOf("game:state") !== -1, "Kein game:state: " + body);
+        client.assert(body.indexOf("\"yourRole\":\"first\"") !== -1, "yourRole fehlt: " + body);
+        client.assert(body.indexOf("\"yourTurn\":true") !== -1, "Spieler 1 ist nicht am Zug: " + body);
+    });
+    client.test("Die Gegnerflotte wird nicht gepusht", function () {
+        client.assert(body.indexOf("\"opponentShips\":null") !== -1, "opponentShips: " + body);
+    });
+%}
+
+### Handshake Spieler 2
+# @no-cookie-jar
+# @name handshakePlayer2
+GET {{host}}/socket.io/?EIO=4&transport=polling
+Cookie: SESSION_ID={{player2Session}}
+
+> {%
+    const body = String(response.body);
+    client.test("Handshake liefert ein OPEN-Paket", function () {
+        client.assert(body.charAt(0) === "0", "Kein OPEN-Paket: " + body);
+    });
+    client.global.set("sidPlayer2", body.match(/"sid":"([^"]+)"/)[1]);
+%}
+
+### Spieler 2 verbindet sich mit der Partie
+# @no-cookie-jar
+# @name connectPlayer2
+POST {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer2}}
+Content-Type: text/plain;charset=UTF-8
+
+40{"gameSessionId":"{{gameId}}"}
+
+### Spieler 2 holt seinen Spielstand ab
+# @no-cookie-jar
+# @name pollPlayer2AfterConnect
+GET {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer2}}
+
+> {%
+    const body = String(response.body);
+    client.test("Verbindung wurde akzeptiert", function () {
+        client.assert(body.indexOf("44") === -1, "Verbindung abgelehnt: " + body);
+    });
+    client.test("Spieler 2 ist 'second' und nicht am Zug", function () {
+        client.assert(body.indexOf("\"yourRole\":\"second\"") !== -1, "yourRole fehlt: " + body);
+        client.assert(body.indexOf("\"yourTurn\":false") !== -1, "yourTurn war true: " + body);
+    });
+%}
+
+### Verbindung ohne gueltige Session wird abgelehnt (fremdes Cookie)
+# @no-cookie-jar
+# @name handshakeStranger
+GET {{host}}/socket.io/?EIO=4&transport=polling
+Cookie: SESSION_ID=ich-bin-kein-spieler
+
+> {%
+    client.global.set("sidStranger", String(response.body).match(/"sid":"([^"]+)"/)[1]);
+%}
+
+### Der Fremde versucht, sich mit der Partie zu verbinden
+# @no-cookie-jar
+# @name connectStranger
+POST {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidStranger}}
+Content-Type: text/plain;charset=UTF-8
+
+40{"gameSessionId":"{{gameId}}"}
+
+### ... und bekommt einen CONNECT_ERROR
+# @no-cookie-jar
+# @name pollStranger
+GET {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidStranger}}
+
+> {%
+    const body = String(response.body);
+    client.test("Fremde Session wird abgewiesen", function () {
+        client.assert(body.indexOf("44") !== -1, "Kein CONNECT_ERROR: " + body);
+        client.assert(
+            body.indexOf("Sie sind kein Spieler dieser Partie") !== -1,
+            "Andere Meldung: " + body
+        );
+    });
+%}
+
+### A) Spieler 1 schiesst auf (9,0) - Traeger von Spieler 2 -> Treffer
+# @no-cookie-jar
+# @name shotA
+POST {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer1}}
+Content-Type: text/plain;charset=UTF-8
+
+421["game:shoot",{"x":9,"y":0}]
+
+### A) Spieler 1 holt Acknowledgement und Broadcast ab
+# @no-cookie-jar
+# @name pollShotA
+GET {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer1}}
+
+> {%
+    const body = String(response.body);
+    client.test("Acknowledgement zum Schuss kommt zurueck", function () {
+        client.assert(body.indexOf("431[") !== -1, "Kein ACK mit Id 1: " + body);
+    });
+    client.test("Treffer wird gemeldet", function () {
+        client.assert(body.indexOf("\"result\":\"hit\"") !== -1, "Kein Treffer: " + body);
+        client.assert(body.indexOf("\"by\":\"first\"") !== -1, "Falscher Schuetze: " + body);
+    });
+    client.test("Treffer versenkt den Traeger noch nicht", function () {
+        client.assert(body.indexOf("\"sunk\":null") !== -1, "sunk war gesetzt: " + body);
+    });
+    client.test("Jetzt ist Spieler 2 am Zug", function () {
+        client.assert(body.indexOf("\"turn\":\"second\"") !== -1, "turn falsch: " + body);
+    });
+    client.test("Noch kein Sieger", function () {
+        client.assert(body.indexOf("\"winner\":null") !== -1, "winner gesetzt: " + body);
+    });
+%}
+
+### A) Spieler 2 sieht denselben Schuss
+# @no-cookie-jar
+# @name pollShotAPlayer2
+GET {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer2}}
+
+> {%
+    const body = String(response.body);
+    client.test("Der Gegner wird ueber den Schuss informiert", function () {
+        client.assert(body.indexOf("game:shot") !== -1, "Kein game:shot: " + body);
+        client.assert(body.indexOf("\"x\":9") !== -1, "Koordinate fehlt: " + body);
+        client.assert(body.indexOf("\"result\":\"hit\"") !== -1, "Ergebnis fehlt: " + body);
+    });
+    client.test("Spieler 2 erfaehrt, dass er am Zug ist", function () {
+        client.assert(body.indexOf("\"turn\":\"second\"") !== -1, "turn falsch: " + body);
+    });
+%}
+
+### B) Spieler 1 schiesst nochmal, obwohl Spieler 2 am Zug ist
+# @no-cookie-jar
+# @name shotB
+POST {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer1}}
+Content-Type: text/plain;charset=UTF-8
+
+422["game:shoot",{"x":9,"y":1}]
+
+### B) Der Schuss wird abgelehnt
+# @no-cookie-jar
+# @name pollShotB
+GET {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer1}}
+
+> {%
+    const body = String(response.body);
+    client.test("Nur wer am Zug ist, darf schiessen", function () {
+        client.assert(body.indexOf("Sie sind nicht am Zug") !== -1, "Andere Antwort: " + body);
+    });
+    client.test("Fehler kommt als ACK und als game:error", function () {
+        client.assert(body.indexOf("432[") !== -1, "Kein ACK mit Id 2: " + body);
+        client.assert(body.indexOf("game:error") !== -1, "Kein game:error: " + body);
+    });
+%}
+
+### C) Spieler 2 schiesst auf (0,0) - Traeger von Spieler 1 -> Treffer
+# @no-cookie-jar
+# @name shotC
+POST {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer2}}
+Content-Type: text/plain;charset=UTF-8
+
+423["game:shoot",{"x":0,"y":0}]
+
+### C) Spieler 2 holt das Ergebnis ab
+# @no-cookie-jar
+# @name pollShotC
+GET {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer2}}
+
+> {%
+    const body = String(response.body);
+    client.test("Treffer von Spieler 2", function () {
+        client.assert(body.indexOf("\"by\":\"second\"") !== -1, "Falscher Schuetze: " + body);
+        client.assert(body.indexOf("\"result\":\"hit\"") !== -1, "Kein Treffer: " + body);
+    });
+    client.test("Der Zug wandert zurueck zu Spieler 1", function () {
+        client.assert(body.indexOf("\"turn\":\"first\"") !== -1, "turn falsch: " + body);
+    });
+%}
+
+### D) Spieler 1 schiesst erneut auf (9,0) -> schon beschossen
+# @no-cookie-jar
+# @name shotD
+POST {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer1}}
+Content-Type: text/plain;charset=UTF-8
+
+424["game:shoot",{"x":9,"y":0}]
+
+### D) Doppelter Schuss wird abgelehnt
+# @no-cookie-jar
+# @name pollShotD
+GET {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer1}}
+
+> {%
+    const body = String(response.body);
+    client.test("Dasselbe Feld kann nicht zweimal beschossen werden", function () {
+        client.assert(
+            body.indexOf("Auf dieses Feld haben Sie bereits geschossen") !== -1,
+            "Andere Antwort: " + body
+        );
+    });
+%}
+
+### E) Spieler 1 schiesst neben das Spielfeld
+# @no-cookie-jar
+# @name shotE
+POST {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer1}}
+Content-Type: text/plain;charset=UTF-8
+
+425["game:shoot",{"x":12,"y":0}]
+
+### E) Koordinate ausserhalb des Spielfelds wird abgelehnt
+# @no-cookie-jar
+# @name pollShotE
+GET {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer1}}
+
+> {%
+    const body = String(response.body);
+    client.test("Koordinate muss auf dem Spielfeld liegen", function () {
+        client.assert(body.indexOf("Spielfeld liegen") !== -1, "Andere Antwort: " + body);
+    });
+%}
+
+### F) Spieler 1 schiesst auf (5,5) - dort liegt nichts -> Wasser
+# @no-cookie-jar
+# @name shotF
+POST {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer1}}
+Content-Type: text/plain;charset=UTF-8
+
+426["game:shoot",{"x":5,"y":5}]
+
+### F) Wasser wird als miss gemeldet, Zug wechselt trotzdem
+# @no-cookie-jar
+# @name pollShotF
+GET {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer1}}
+
+> {%
+    const body = String(response.body);
+    client.test("Fehlschuss wird gemeldet", function () {
+        client.assert(body.indexOf("\"result\":\"miss\"") !== -1, "Kein miss: " + body);
+    });
+    client.test("Nach einem Fehlschuss ist der Gegner dran", function () {
+        client.assert(body.indexOf("\"turn\":\"second\"") !== -1, "turn falsch: " + body);
+    });
+%}
+
+### G) Spieler 2 trifft das Schlachtschiff auf (0,2)
+# @no-cookie-jar
+# @name shotG
+POST {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer2}}
+Content-Type: text/plain;charset=UTF-8
+
+427["game:shoot",{"x":0,"y":2}]
+
+### G) Ergebnis abholen
+# @no-cookie-jar
+# @name pollShotG
+GET {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer2}}
+
+> {%
+    const body = String(response.body);
+    client.test("Treffer, Zug geht zurueck an Spieler 1", function () {
+        client.assert(body.indexOf("\"result\":\"hit\"") !== -1, "Kein Treffer: " + body);
+        client.assert(body.indexOf("\"turn\":\"first\"") !== -1, "turn falsch: " + body);
+    });
+%}
+
+### H) Spieler 1 trifft den Zerstoerer von Spieler 2 auf (1,0) - erste Haelfte
+# @no-cookie-jar
+# @name shotH
+POST {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer1}}
+Content-Type: text/plain;charset=UTF-8
+
+428["game:shoot",{"x":1,"y":0}]
+
+### H) Treffer, aber noch nicht versenkt
+# @no-cookie-jar
+# @name pollShotH
+GET {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer1}}
+
+> {%
+    const body = String(response.body);
+    client.test("Treffer auf dem Zerstoerer", function () {
+        client.assert(body.indexOf("\"result\":\"hit\"") !== -1, "Kein Treffer: " + body);
+    });
+    client.test("Ein Zweier ist mit einem Treffer nicht versenkt", function () {
+        client.assert(body.indexOf("\"sunk\":null") !== -1, "sunk war gesetzt: " + body);
+    });
+%}
+
+### I) Spieler 2 ist dran und trifft auf (1,2)
+# @no-cookie-jar
+# @name shotI
+POST {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer2}}
+Content-Type: text/plain;charset=UTF-8
+
+429["game:shoot",{"x":1,"y":2}]
+
+### I) Ergebnis abholen, damit Spieler 1 wieder am Zug ist
+# @no-cookie-jar
+# @name pollShotI
+GET {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer2}}
+
+> {%
+    const body = String(response.body);
+    client.test("Zug geht an Spieler 1", function () {
+        client.assert(body.indexOf("\"turn\":\"first\"") !== -1, "turn falsch: " + body);
+    });
+%}
+
+### J) Spieler 1 trifft (1,1) und versenkt damit den Zerstoerer
+# @no-cookie-jar
+# @name shotJ
+POST {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer1}}
+Content-Type: text/plain;charset=UTF-8
+
+4210["game:shoot",{"x":1,"y":1}]
+
+### J) Versenkt-Meldung
+# @no-cookie-jar
+# @name pollShotJ
+GET {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer1}}
+
+> {%
+    const body = String(response.body);
+    client.test("Zweiter Treffer versenkt den Zerstoerer", function () {
+        client.assert(body.indexOf("\"result\":\"hit\"") !== -1, "Kein Treffer: " + body);
+        client.assert(body.indexOf("\"sunk\":2") !== -1, "Nicht versenkt gemeldet: " + body);
+    });
+    client.test("Das Spiel laeuft weiter - es stehen noch Schiffe", function () {
+        client.assert(body.indexOf("\"phase\":\"IN_PROGRESS\"") !== -1, "Phase falsch: " + body);
+        client.assert(body.indexOf("\"winner\":null") !== -1, "winner gesetzt: " + body);
+    });
+%}
+
+### Spielstand von Spieler 1 nach den Schuessen (ueber REST gegengeprueft)
+# @no-cookie-jar
+# @name stateAfterShots
+GET {{host}}/games/{{gameId}}/state
+Cookie: SESSION_ID={{player1Session}}
+
+> {%
+    client.test("Alle Schuesse von Spieler 1 sind protokolliert", function () {
+        // A (9,0), F (5,5), H (1,0), J (1,1) - die abgelehnten Schuesse nicht.
+        client.assert(
+            response.body.yourShots.length === 4,
+            "yourShots: " + JSON.stringify(response.body.yourShots)
+        );
+    });
+    client.test("Die Schuesse des Gegners sind sichtbar", function () {
+        // C (0,0), G (0,2), I (1,2)
+        client.assert(
+            response.body.opponentShots.length === 3,
+            "opponentShots: " + JSON.stringify(response.body.opponentShots)
+        );
+    });
+    client.test("Treffer sind auf der eigenen Flotte vermerkt", function () {
+        const carrier = response.body.yourShips.find(function (ship) { return ship.size === 5; });
+        client.assert(carrier.hits === 1, "Traeger-Treffer: " + carrier.hits);
+    });
+    client.test("Die Gegnerflotte bleibt verborgen", function () {
+        client.assert(response.body.opponentShips === null, "Gegnerflotte wurde ausgeliefert!");
+    });
+%}
+
+### Spielstand ueber den Socket anfordern (game:state als Request)
+# @no-cookie-jar
+# @name requestStateOverSocket
+POST {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer1}}
+Content-Type: text/plain;charset=UTF-8
+
+4211["game:state"]
+
+### Antwort auf die Spielstand-Anfrage
+# @no-cookie-jar
+# @name pollRequestedState
+GET {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer1}}
+
+> {%
+    const body = String(response.body);
+    client.test("Der Socket liefert denselben Spielstand", function () {
+        client.assert(body.indexOf("4311[") !== -1, "Kein ACK mit Id 11: " + body);
+        client.assert(body.indexOf("\"yourRole\":\"first\"") !== -1, "yourRole fehlt: " + body);
+    });
+%}
+
+### Optional: Pong nachschicken, falls der Server ein Ping (2) geliefert hat
+# Haelt die Polling-Verbindung am Leben, wenn man die Requests einzeln durchklickt.
+# @no-cookie-jar
+# @name pong
+POST {{host}}/socket.io/?EIO=4&transport=polling&sid={{sidPlayer1}}
+Content-Type: text/plain;charset=UTF-8
+
+3

@@ -9,7 +9,8 @@ const port = 3000;
 app.use(cookieParser());
 app.use(express.json());
 
-const GAME_TTL_MS = 1000 * 60 * 60;
+// Für Tests kann die Ablaufzeit über die Umgebungsvariable verkürzt werden.
+const GAME_TTL_MS = Number(process.env.GAME_TTL_MS) || 1000 * 60 * 60;
 const CLEANUP_INTERVAL_MS = 1000 * 60;
 const CLIENT_BASE_URL = process.env.CLIENT_BASE_URL || "http://localhost:5173";
 
@@ -541,7 +542,10 @@ io.on("connection", (socket) => {
     socket.emit("game:state", playerStateFor(game, sessionId));
   }
 
-  socket.on("game:state", (payload, ack) => {
+  // Das Event kann mit oder ohne Payload kommen - der Acknowledgement-Callback
+  // ist immer das letzte Argument.
+  socket.on("game:state", (...args) => {
+    const ack = args.find((arg) => typeof arg === "function");
     const game = gameOfSocket(socket);
     if (!game) {
       return fail(socket, ack, "Dieses Spiel ist abgelaufen");

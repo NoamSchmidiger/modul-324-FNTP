@@ -63,6 +63,15 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Ensure ECR repositories exist
+        shell: bash
+        run: |
+          for repository in "${DOCKER_IMAGE_NAME_FRONTEND}" "${DOCKER_IMAGE_NAME_BACKEND}"; do
+            if ! aws ecr describe-repositories --repository-names "$repository" --region "$AWS_REGION" >/dev/null 2>&1; then
+              aws ecr create-repository --repository-name "$repository" --region "$AWS_REGION"
+            fi
+          done
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
         with:

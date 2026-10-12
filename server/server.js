@@ -73,7 +73,7 @@ function findActiveGameOfPlayer(sessionId) {
 function isPlayer(game, sessionId) {
   return Boolean(
     sessionId &&
-      (game.firstPlayerId === sessionId || game.secondPlayerId === sessionId),
+    (game.firstPlayerId === sessionId || game.secondPlayerId === sessionId),
   );
 }
 

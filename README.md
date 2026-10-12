@@ -5,6 +5,7 @@ Dieses Repository enthält eine Web-Applikation für das Spiel **Schiffe versenk
 Das Projekt besteht aktuell aus einem Vue-Frontend sowie einem Node.js-Server für die eigentliche Spielverwaltung. Zusätzlich ist ein Spring-Boot-Backend mit einem einfachen Test-Endpunkt vorhanden.
 
 ## Team
+
 > Wird eine andere Ordnerstruktur verwendet, müssen die entsprechenden Build- und Deployment-Scripts angepasst werden.
 
 - Peter Ngo

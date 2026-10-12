@@ -2,7 +2,7 @@
 # Name der Applikation
 # WARNING: muss gleich sein zum Label "service" des zu deployende Dockerfile
 #          siehe: `../../frontend/Dockerfile`
-service: myapp
+service: myapp-frontend
 
 # Name vom Container-Image
 image: m324/myapp-frontend

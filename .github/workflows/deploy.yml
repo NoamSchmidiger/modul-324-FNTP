@@ -137,5 +137,5 @@ jobs:
           KAMAL_REGISTRY_PASSWORD: ${{ steps.login-ecr.outputs[format('docker_password_{0}_dkr_ecr_us_east_1_amazonaws_com', secrets.AWS_ACCOUNT_ID)] }}
           VERSION: ${{ steps.meta-frontend.outputs.version }}
         run: |
-          bundle exec kamal deploy --skip-push --version=$VERSION
+          bundle exec kamal deploy -c config/deploy.yml --skip-push --version=$VERSION
           echo "Visit me on [http://$KAMAL_SERVER_IP](http://$KAMAL_SERVER_IP) 🚀" >> $GITHUB_STEP_SUMMARY
